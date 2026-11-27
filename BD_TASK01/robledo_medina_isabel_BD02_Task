@@ -1,0 +1,84 @@
+CREATE DATABASE gym;
+USE gym;
+
+CREATE TABLE CLIENT (
+    client_id         INT AUTO_INCREMENT PRIMARY KEY,
+    first_name        VARCHAR(50)  NOT NULL,
+    last_name         VARCHAR(80)  NOT NULL,
+    registration_date DATE         NOT NULL,
+    email             VARCHAR(100) NOT NULL,
+    phone             VARCHAR(20)  NOT NULL,
+    CONSTRAINT uq_client_email UNIQUE (email)
+);
+
+CREATE TABLE EQUIPMENT (
+    equipment_id INT AUTO_INCREMENT PRIMARY KEY,
+    name         VARCHAR(100) NOT NULL,
+    brand        VARCHAR(50)  NOT NULL,
+    category     ENUM('Free Weight', 'Cardio', 'Strength') NOT NULL,
+    availability BOOLEAN      NOT NULL DEFAULT TRUE,
+    quantity     INT          NOT NULL,
+    CONSTRAINT chk_quantity_positive CHECK (quantity > 0)
+);
+
+CREATE TABLE RENT (
+    rent_id      INT AUTO_INCREMENT PRIMARY KEY,
+    client_id    INT      NOT NULL,
+    equipment_id INT      NOT NULL,
+    start_date   DATETIME NOT NULL,
+    end_date     DATETIME NULL,
+    CONSTRAINT fk_rent_client    FOREIGN KEY (client_id)    REFERENCES CLIENT (client_id),
+    CONSTRAINT fk_rent_equipment FOREIGN KEY (equipment_id) REFERENCES EQUIPMENT (equipment_id)
+);
+
+-- 1. Tier field
+ALTER TABLE EQUIPMENT
+    ADD COLUMN tier ENUM('Free', 'Normal', 'Premium') NOT NULL DEFAULT 'Normal';
+
+-- 2. Quantity >= 3
+ALTER TABLE EQUIPMENT
+    ADD CONSTRAINT chk_quantity_min CHECK (quantity >= 3);
+
+-- 3. Registration date later than 13/03/2026
+ALTER TABLE CLIENT
+    ADD CONSTRAINT chk_registration_date CHECK (registration_date > '2026-03-13');
+
+-- 4. Rental start time between 6:00 and 21:00
+ALTER TABLE RENT
+    ADD CONSTRAINT chk_start_time
+    CHECK (TIME(start_date) BETWEEN '06:00:00' AND '21:00:00');
+
+-- 5. Remove the quantity constraint from step 2
+ALTER TABLE EQUIPMENT
+    DROP CHECK chk_quantity_min;
+
+-- 6. Delete the phone column
+ALTER TABLE CLIENT
+    DROP COLUMN phone;
+
+-- 7. Equipment names must be unique
+ALTER TABLE EQUIPMENT
+    ADD CONSTRAINT uq_equipment_name UNIQUE (name);
+
+-- 8. Composite primary key on the identifier fields
+ALTER TABLE RENT
+    MODIFY rent_id INT NOT NULL,
+    DROP PRIMARY KEY,
+    ADD PRIMARY KEY (rent_id, client_id, equipment_id);
+
+-- 9. One equipment in use per client at a time
+ALTER TABLE RENT
+    ADD COLUMN active_client_id INT
+    GENERATED ALWAYS AS (IF(end_date IS NULL, client_id, NULL)) STORED;
+
+CREATE UNIQUE INDEX uq_client_in_use ON RENT (active_client_id);
+
+-- 10. Rename CLIENT to MEMBER
+RENAME TABLE CLIENT TO MEMBER;
+
+-- 11. Remove RENT
+DROP TABLE RENT;
+
+-- 12. User with SELECT and INSERT on EQUIPMENT
+CREATE USER 'isa'@'localhost' IDENTIFIED BY 'Isa_2026!';
+GRANT SELECT, INSERT ON gym.EQUIPMENT TO 'isa'@'localhost';
