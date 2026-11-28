@@ -1,1 +1,76 @@
+CREATE DATABASE gym;
+USE gym;
 
+CREATE TABLE CLIENT (
+    client_id         INT NOT NULL PRIMARY KEY,
+    first_name        VARCHAR(50) NOT NULL,
+    last_name         VARCHAR(50) NOT NULL,
+    registration_date DATE NOT NULL,
+    email             VARCHAR(100) NOT NULL UNIQUE,
+    phone             VARCHAR(20) NOT NULL
+);
+
+CREATE TABLE EQUIPMENT (
+    equipment_id INT NOT NULL PRIMARY KEY,
+    name         VARCHAR(100) NOT NULL,
+    brand        VARCHAR(50) NOT NULL,
+    category     ENUM('Free Weight', 'Cardio', 'Strength') NOT NULL,
+    availability BOOLEAN NOT NULL DEFAULT TRUE,
+    quantity     INT NOT NULL CHECK (quantity > 0)
+);
+
+CREATE TABLE RENT (
+    rent_id      INT NOT NULL PRIMARY KEY,
+    client_id    INT NOT NULL,
+    equipment_id INT NOT NULL,
+    start_date   DATETIME NOT NULL,
+    end_date     DATETIME NULL,
+    FOREIGN KEY (client_id) REFERENCES CLIENT (client_id),
+    FOREIGN KEY (equipment_id) REFERENCES EQUIPMENT (equipment_id)
+);
+
+-- 1
+ALTER TABLE EQUIPMENT
+    ADD COLUMN tier ENUM('Free', 'Normal', 'Premium');
+
+-- 2
+ALTER TABLE EQUIPMENT
+    ADD CONSTRAINT chk_quantity_min CHECK (quantity >= 3);
+
+-- 3
+ALTER TABLE CLIENT
+    ADD CHECK (registration_date > '2026-03-13');
+
+-- 4
+ALTER TABLE RENT
+    ADD CHECK (TIME(start_date) BETWEEN '06:00:00' AND '21:00:00');
+
+-- 5
+ALTER TABLE EQUIPMENT
+    DROP CHECK chk_quantity_min;
+
+-- 6
+ALTER TABLE CLIENT
+    DROP COLUMN phone;
+
+-- 7
+ALTER TABLE EQUIPMENT
+    ADD UNIQUE (name);
+
+-- 8
+ALTER TABLE RENT
+    DROP PRIMARY KEY,
+    ADD PRIMARY KEY (rent_id, client_id, equipment_id);
+
+-- 9
+CREATE UNIQUE INDEX uq_client_in_use ON RENT (client_id, start_date);
+
+-- 10
+RENAME TABLE CLIENT TO MEMBER;
+
+-- 11
+DROP TABLE RENT;
+
+-- 12
+CREATE USER 'isa' IDENTIFIED BY 'Isa2026';
+GRANT SELECT, INSERT ON EQUIPMENT TO 'isa';
