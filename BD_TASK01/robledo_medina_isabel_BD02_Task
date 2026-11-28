@@ -63,7 +63,7 @@ ALTER TABLE RENT
     ADD PRIMARY KEY (rent_id, client_id, equipment_id);
 
 -- 9
-CREATE UNIQUE INDEX uq_client_in_use ON RENT (client_id, end_date);
+CREATE UNIQUE INDEX uq_client_in_use ON RENT (client_id, start_date);
 
 -- 10
 RENAME TABLE CLIENT TO MEMBER;
